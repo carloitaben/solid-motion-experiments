@@ -143,9 +143,9 @@ describe('<MotionLab />', () => {
     expect(getByRole('heading', { name: '1. Layout toggle' })).toBeInTheDocument();
     expect(getByRole('heading', { name: '2. Keyed reorder' })).toBeInTheDocument();
     expect(getByRole('heading', { name: '3. Shared element' })).toBeInTheDocument();
-    // Four tiles + their four labels + four chips + the single hero branch
-    // currently mounted.
-    expect(container.querySelectorAll('[data-layout]')).toHaveLength(13);
+    // Four tiles + their four labels + four chips + their four labels + the
+    // single hero branch currently mounted and its two labels.
+    expect(container.querySelectorAll('[data-layout]')).toHaveLength(19);
     expect(container.querySelectorAll('[data-layout-id="hero"]')).toHaveLength(1);
   });
 
@@ -166,6 +166,51 @@ describe('<MotionLab />', () => {
       expect(tile.children).toHaveLength(1);
       expect(tile.firstElementChild).toHaveAttribute('data-layout', 'position');
     });
+  });
+
+  test('chips and both shared-element branches nest their text as position nodes', async () => {
+    // The rule is not specific to the tiles: every layout node that paints
+    // text gets a position-only node inside it, including the shared hero's
+    // conditional branches. The outer node still animates size and position.
+    installBuilder();
+    const { getByRole, container } = render(() => <MotionLab />);
+
+    const chips = [...container.querySelectorAll('.motion-lab-chip')];
+    expect(chips).toHaveLength(4);
+    chips.forEach((chip) => {
+      expect(chip).toHaveAttribute('data-layout');
+      expect(chip).not.toHaveAttribute('data-layout', 'position');
+      expect(chip.children).toHaveLength(1);
+      expect(chip.firstElementChild).toHaveAttribute('data-layout', 'position');
+      expect(chip.firstElementChild?.textContent).toBe(chip.textContent);
+    });
+
+    const labels = (branch: Element) => [...branch.children];
+    const collapsed = container.querySelector('[data-layout-id="hero"]')!;
+    expect(collapsed).toHaveAttribute('data-layout');
+    expect(collapsed).not.toHaveAttribute('data-layout', 'position');
+    expect(labels(collapsed)).toHaveLength(2);
+    expect(
+      labels(collapsed).every((node) => node.getAttribute('data-layout') === 'position'),
+    ).toBe(true);
+    expect(labels(collapsed).map((node) => node.textContent)).toEqual([
+      'Hero',
+      'shared element',
+    ]);
+
+    fireEvent.click(getByRole('button', { name: 'Expand' }));
+    await settle();
+
+    const expanded = container.querySelector('[data-layout-id="hero"]')!;
+    expect(expanded).toHaveClass('is-expanded');
+    expect(labels(expanded)).toHaveLength(2);
+    expect(
+      labels(expanded).every((node) => node.getAttribute('data-layout') === 'position'),
+    ).toBe(true);
+    expect(labels(expanded).map((node) => node.textContent)).toEqual([
+      'Hero',
+      'shared element, expanded',
+    ]);
   });
 
   test('the update callback runs on a microtask, not at the call site', async () => {
@@ -258,7 +303,7 @@ describe('<MotionLab />', () => {
     const entry = container.querySelector('.motion-lab-log li');
     expect(entry).toHaveTextContent('Keyed reorder → rotate');
     expect(entry).toHaveTextContent('flush');
-    expect(entry).toHaveTextContent('layout nodes: 4');
+    expect(entry).toHaveTextContent('layout nodes: 8');
     expect(entry).toHaveTextContent('shared: 0');
   });
 
@@ -368,7 +413,7 @@ describe('<MotionLab />', () => {
     expect(snapshots[0]?.heroClass).toBe('motion-lab-hero is-expanded');
     expect(snapshots[0]?.sharedNodes).toBe(1);
     expect(container.querySelector('.motion-lab-log li')).toHaveTextContent(
-      'layout nodes: 1',
+      'layout nodes: 3',
     );
     expect(container.querySelector('.motion-lab-log li')).toHaveTextContent(
       'shared: 1',

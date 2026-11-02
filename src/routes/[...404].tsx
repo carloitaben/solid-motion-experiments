@@ -17,7 +17,7 @@ export default function NotFound() {
       <Title>Not Found</Title>
       <h1>Page Not Found</h1>
       <p>
-        The motion lab is the only page here — <a href={paths()}>go to the lab</a>.
+        The labs live at the root — <a href={paths()}>go to the layout lab</a>.
       </p>
     </main>
   );

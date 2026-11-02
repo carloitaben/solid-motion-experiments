@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>motion@14.8.0: styleEffect cancel() is a no-op after animateLayout() handoff</title>
+    <style>
+      body {
+        max-width: 42rem;
+        margin: 2rem auto;
+        font-family: ui-sans-serif, system-ui, sans-serif;
+        color: #0f172a;
+      }
+      .slot {
+        padding: 1rem;
+        border: 1px dashed #94a3b8;
+      }
+      .box {
+        width: 8rem;
+        height: 4rem;
+        border-radius: 0.6rem;
+        background: linear-gradient(135deg, #f59e0b, #db2777);
+      }
+      .box.expanded {
+        width: 100%;
+        height: 10rem;
+      }
+      output {
+        display: block;
+        margin-top: 1rem;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        white-space: pre-wrap;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>styleEffect cancel() after animateLayout handoff</h1>
+    <p>
+      Motion 14.8.0. <code>styleEffect()</code> returns a cleanup documented to
+      stop applying values to the element. After <code>animateLayout()</code>
+      adopts the element, handoff moves the value into the layout node's visual
+      element. The cleanup no longer stops writes, and
+      <code>releaseElement()</code> no longer detaches them.
+    </p>
+
+    <div class="slot">
+      <div id="box" class="box" data-layout></div>
+    </div>
+    <output id="result">running…</output>
+
+    <script type="module">
+      import { animateLayout, motionValue, releaseElement, styleEffect } from 'motion';
+
+      const box = document.getElementById('box');
+      const slot = box.parentElement;
+      const radius = motionValue(10);
+      const cancel = styleEffect(box, { borderRadius: radius });
+
+      const animation = await animateLayout(
+        slot,
+        () => {
+          box.classList.add('expanded');
+        },
+        { type: 'spring', visualDuration: 0.2 },
+      );
+      await animation.finished;
+
+      const before = box.style.borderRadius;
+      cancel();
+      releaseElement(box);
+      radius.set(40);
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+
+      const after = box.style.borderRadius;
+      document.body.dataset.result = after;
+      document.getElementById('result').textContent = [
+        `before cancel: ${before}`,
+        `after cancel() + releaseElement() + radius.set(40): ${after}`,
+        after === '40px'
+          ? 'BUG: the value is still applied after every documented cleanup.'
+          : 'cleanup stopped the value (expected).',
+      ].join('\n');
+    </script>
+  </body>
+</html>

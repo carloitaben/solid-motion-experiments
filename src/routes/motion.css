@@ -1,0 +1,288 @@
+/* Scoped to the motion components page: every selector hangs off
+   .motion-api-lab so the shared app styles (App.css: `body`, `main`) stay
+   generic. */
+.motion-api-lab {
+  max-width: 64rem;
+  margin: 0 auto;
+  padding: 2rem 1rem 4rem;
+  text-align: left;
+}
+
+.motion-api-lab-lede {
+  max-width: 48rem;
+  color: #334155;
+}
+
+.motion-api-lab code {
+  padding: 0.1rem 0.3rem;
+  border-radius: 0.25rem;
+  background-color: #eef2f7;
+  font-size: 0.9em;
+}
+
+.motion-api-lab-panel {
+  margin: 1.25rem 0;
+  padding: 1rem 1.25rem 1.25rem;
+  border: 1px solid #d8dee6;
+  border-radius: 0.75rem;
+}
+
+.motion-api-lab-panel h2 {
+  margin: 0 0 0.35rem;
+  font-size: 1.1rem;
+}
+
+.motion-api-lab-panel p {
+  max-width: 50rem;
+  margin: 0.35rem 0 0.75rem;
+  color: #475569;
+  font-size: 0.9rem;
+}
+
+.motion-api-lab-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.85rem;
+}
+
+.motion-api-lab-toolbar button {
+  padding: 0.4rem 0.9rem;
+  border: 1px solid #94a3b8;
+  border-radius: 0.5rem;
+  background-color: #f8fafc;
+  font: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.motion-api-lab-toolbar button:hover {
+  background-color: #eef2f7;
+}
+
+.motion-api-lab-toolbar output {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.8rem;
+  color: #0f172a;
+}
+
+/* 1. Spring stage */
+
+.motion-api-lab-stage {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-height: 4.5rem;
+  padding: 0 0.75rem;
+  border: 1px dashed #cbd5e1;
+  border-radius: 0.6rem;
+  overflow: hidden;
+}
+
+.motion-api-lab-puck {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 0.6rem;
+  background-image: linear-gradient(135deg, #38bdf8, #2563eb);
+  will-change: transform;
+}
+
+/* Same specificity as `.motion-api-lab-toolbar button`, so the feature
+   demo's own look wins over the shared toolbar rule. */
+.motion-api-lab-toolbar button.motion-api-lab-press {
+  background-color: #0f172a;
+  color: #f8fafc;
+  border-color: #0f172a;
+}
+
+.motion-api-lab-toolbar button.motion-api-lab-press:hover {
+  background-color: #1e293b;
+}
+
+/* 2. Layout tiles */
+
+/* A position-only layout node is transformed; a non-replaced inline box
+   ignores transforms, so the counter-scale would never reach the text. */
+.motion-api-lab [data-layout='position'] {
+  display: inline-block;
+}
+
+.motion-api-lab-tiles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.motion-api-lab-tiles[data-mode='grid'] {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.motion-api-lab-tile {
+  display: grid;
+  place-content: center;
+  padding: 1rem 1.4rem;
+  border-radius: 0.5rem;
+  background-color: #e0f2fe;
+  color: #0c4a6e;
+  font-weight: 600;
+}
+
+.motion-api-lab-tiles[data-mode='grid'] .motion-api-lab-tile {
+  padding: 1.6rem 1.4rem;
+}
+
+/* 3. Refs */
+
+.motion-api-lab-refrow {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: start;
+}
+
+.motion-api-lab-refbox {
+  padding: 1.25rem;
+  border-radius: 0.5rem;
+  background-color: #f1f5f9;
+  font-weight: 600;
+}
+
+.motion-api-lab-refbox[data-wide] {
+  padding: 2.5rem 1.25rem;
+}
+
+.motion-api-lab-initial {
+  padding: 1.25rem;
+  border-radius: 0.5rem;
+  background-color: #fef3c7;
+  color: #78350f;
+  font-weight: 600;
+}
+
+/* The values-only probe sits below the refrow, so it does not change that row's
+   measured grid geometry. */
+.motion-api-lab-borrowed {
+  margin-top: 0.75rem;
+}
+
+/* 4. Radius */
+
+.motion-api-lab-hero-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+}
+
+.motion-api-lab-hero-card {
+  display: grid;
+  align-content: start;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.6rem;
+}
+
+.motion-api-lab-hero-card .motion-api-lab-toolbar {
+  margin-bottom: 0;
+}
+
+.motion-api-lab-hero-slot {
+  display: grid;
+  align-content: start;
+  justify-items: start;
+  min-height: 11rem;
+  padding: 0.75rem;
+  border: 1px dashed #cbd5e1;
+  border-radius: 0.6rem;
+}
+
+.motion-api-lab-hero {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 0.15rem;
+  width: 8rem;
+  height: 4rem;
+  border-radius: 0.6rem;
+  background-image: linear-gradient(135deg, #f59e0b, #db2777);
+  color: #fff;
+  font-weight: 600;
+}
+
+.motion-api-lab-hero[data-wide] {
+  width: 100%;
+  height: 9rem;
+}
+
+.motion-api-lab-hero small {
+  font-size: 0.62rem;
+  font-weight: 400;
+  opacity: 0.9;
+}
+
+/* Readouts and the run log */
+
+.motion-api-lab-readout {
+  display: block;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.72rem;
+  color: #475569;
+  overflow-wrap: anywhere;
+}
+
+.motion-api-lab-readout code {
+  font-size: 0.72rem;
+}
+
+.motion-api-lab-log {
+  display: grid;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.85rem;
+}
+
+.motion-api-lab-log li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0.45rem 0.6rem;
+  border-radius: 0.4rem;
+  background-color: #f8fafc;
+}
+
+.motion-api-lab-log-label {
+  font-weight: 600;
+}
+
+.motion-api-lab-log-stats {
+  color: #475569;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.78rem;
+}
+
+.motion-api-lab-empty {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.motion-api-lab-limits {
+  display: grid;
+  gap: 0.45rem;
+  max-width: 50rem;
+  margin: 0.5rem 0 0;
+  padding-left: 1.1rem;
+  color: #475569;
+  font-size: 0.9rem;
+}
+
+@media (max-width: 40rem) {
+  .motion-api-lab-refrow {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

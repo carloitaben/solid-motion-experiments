@@ -16,7 +16,7 @@ export default function Document(props: ParentProps) {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta
           name="description"
-          content="Motion layout animations driven by Solid 2 signals: animateLayout, three commit strategies, and what each one sees."
+          content="Motion layout animations driven by Solid 2 signals: animateLayout commit strategies, composable refs, and a shared-element border-radius handoff."
         />
         <link rel="icon" href="/favicon.ico" />
         {/* Default title; a route's <Title> replaces it once the page renders. */}

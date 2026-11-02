@@ -7,7 +7,8 @@ components, no adapter: each experiment is one
 experiment harness.
 
 The repo started as the Solid `fullstack` template; the home/counter/users/
-session/API sample was removed, so the lab is the only page (`/`) plus a 404.
+session/API sample was removed, so the lab is the layout harness on `/`, the
+refs page on `/refs`, and a 404.
 
 ## What the page shows
 
@@ -21,13 +22,50 @@ Each run is logged with the strategy used, how many layout/shared nodes were in
 the scope when Motion finalized the run, and how long the click took to get
 there. The log is a snapshot of the scope, not a count of that run's animations.
 
+Every layout node that paints text nests a position-only layout node inside it:
+`data-layout="position"` on `/` and `/refs`, `motion.span layout="position"` on
+`/motion`. Motion projects that descendant too, so it counter-scales the copy
+against the animated box instead of stretching the letters. It applies to both
+branches of a shared hero as well. Those nodes are `display: inline-block`
+because a transform on a non-replaced inline box is ignored, and the
+counter-scale would never reach the text.
+
 - `src/routes/index.tsx` — the lab (state, strategies, log)
 - `src/routes/index.css` — its styles, scoped under `.motion-lab`
 - `src/routes/index.test.tsx` — jsdom harness with a mocked `animateLayout`
   that reproduces Motion's scheduling (see [Tests](#tests))
+- `src/routes/refs.tsx` — the refs page: two local composables, a shared-element
+  radius comparison, and the same kind of run log
+- `src/routes/refs.css` — its styles, scoped under `.refs-lab`
+- `src/routes/refs.test.tsx` — jsdom harness for the composables' boundary,
+  cleanup and ref binding
 - `src/routes/[...404].tsx` — 404 that returns status 404 and links back
 - `src/router.ts`, `src/App.tsx`, `src/Document.tsx` — file routes, shell, document
 - `env.ts` — typed client env (`VITE_APP_NAME`, default `Solid Motion Lab`)
+
+### The refs page (`/refs`)
+
+The page keeps both experiments in `src/routes/refs.tsx`; there are no lib
+files.
+
+| Composable | Returns | What it owns |
+| ---------- | ------- | ------------ |
+| `createLayoutScope()` | `{ ref, update }` | the scope element, the set of running groups, `onCleanup` |
+| `createStyleRef(values)` | a ref callback | a `styleEffect()` binding for the element the ref receives |
+
+Both follow Solid 2's two-phase ref shape. The setup half runs under the
+component owner, where `onCleanup` is registered; the returned callback runs
+with no owner (`runWithOwner(null)` in `@solidjs/web`), so it only writes DOM
+state and never returns a cleanup. `update(mutate, label)` is the explicit
+update boundary: it calls `animateLayout(scope, () => { mutate(); flush(); })`,
+then tracks the group until it settles. With no scope element (the server, or a
+ref that has not attached) it runs the mutation without animating and without
+touching the DOM.
+
+The shared-element section runs three copies of the hero — no binding, a
+`borderRadius` of `9.6` (px), and `'0.6rem'` — and samples the inline corner
+radius and projection scale during each run. The result is under
+[Border radius handoff](#border-radius-handoff-refs-page).
 
 ## Versions tested
 
@@ -46,6 +84,7 @@ pnpm dev                 # http://localhost:3000 (streaming SSR)
 pnpm dev --port 4322     # alternate port, diagnostics on /__solid/diagnostics
 
 pnpm test                # vitest, jsdom
+pnpm test:e2e            # Playwright browser checks, its own dev server on 4399
 pnpm lint                # oxlint src
 pnpm build               # dist/client + dist/server (handler + node.js)
 PORT=4321 node dist/server/node.js   # or: pnpm start (reads .env if present)
@@ -166,16 +205,121 @@ to the CSS radius when the inline transform is cleared at the end — the visibl
 our samples; Motion does ship scale correctors for radius, so a setup that
 triggers them would make the snap an explicit inline-style change instead.
 
+### Border radius handoff (refs page)
+
+The refs page answers the follow-up: `styleEffect(element, { borderRadius })` is
+a public binding, `animateLayout()` takes the bound values into the visual
+element it creates for the node (`resolveVisualElement` → `handOffElementState`),
+and a shared element's blend then mixes `borderRadius` from the old node's
+values to the new node's. With the value in the projection renderer's
+`latestValues`, the scale corrector (`correctBorderRadius`) rewrites the four
+inline corner properties as percentages of the target box on every projected
+frame.
+
+Measured in headless Chromium on the production build, expanding the px card
+(`borderRadius: 9.6`, the CSS `0.6rem` at a 16px root):
+
+- **px binding** — at 4ms the inline corner was `border-top-left-radius: 7.5%
+  15%` with element scale `0.4836, 0.4`. The expanded box is 265×160, so 7.5% of
+  265 × 0.4836 ≈ 9.6px and 15% of 160 × 0.4 = 9.6px: the painted corner stays a
+  9.6px circle while the box is squashed. On collapse the sign flips (scale
+  `2.07, 2.5`) and the percentage shrinks to compensate. The last sampled frame
+  is back to `9.6px`; a later render restores the bound value.
+- **no binding** — no inline corner property at all; the CSS radius is scaled
+  with the box (9.6px × 0.4836 × 0.4 → an ellipse), i.e. the jump above.
+- **`'0.6rem'` binding** — worse than nothing during a shared run. The corrector
+  only converts px numbers/strings, but the shared blend runs first and
+  `mixValues` parses both radii with `parseFloat`, dropping the unit: the
+  corrector receives the number `0.6` and treats it as 0.6px, writing `0.46875%
+  0.9375%` (≈0.6px of the projected box). Corners nearly square off mid-run,
+  then the inline value returns to `0.6rem`. A non-px string is not corrected at
+  all outside the shared path, so binding `rem` buys nothing and costs this.
+
+Caveats for the handoff:
+
+- The binding has to exist **before** the node is adopted. `handOffElementState`
+  runs when `resolveVisualElement` creates the visual element, which for the
+  incoming branch is at reconcile. The ref callback runs during Solid's commit,
+  which is inside `updateDom`, so it is early enough; binding later is not part
+  of this path.
+- Writing the **same** MotionValue after adoption still works: the refs page's
+  "thicker radius" button moves the px hero from `9.6px` to `24px` while the
+  node has a visual element (inline `border-radius: 24px`), and the next shared
+  run corrects 24px instead — `9.07% 15%` at scale `2.07, 2.5` over the 128×64
+  collapsed box. The value is handed to the renderer, not copied and frozen.
+- `styleEffect`, `motionValue`, `handOffElementState` and the corrector are all
+  in `motion`'s exported type surface, but the layout documentation does not
+  describe this interaction. Treat it as observed 14.8.0 behaviour, not a
+  documented contract.
+
 ## Tests
 
-14 tests in `src/routes/index.test.tsx`, jsdom, `motion` mocked. The mock keeps
+16 tests in `src/routes/index.test.tsx`, jsdom, `motion` mocked. The mock keeps
 the part the strategies exist to expose: the microtask queue, the update
 callback, synchronous reconcile vs `Promise.all` deferral, and the builder
 settling with an animation that outlives the promise. It records what the scope
 looked like at reconcile time, so `flush`/`batched`/`promise` differences are
 asserted as DOM snapshots, plus run overlap, unmount-mid-run, cleanup behavior,
 and an interrupted run whose `finished` promise stays pending. It does not
-exercise real animation frames — that is what the browser checks above are for.
+exercise real animation frames, and nothing here or in the browser check
+asserts Motion's actual curves, durations or timing: the mock never runs a
+spring, and the browser check only observes projection transforms, not how
+they move over time.
+
+10 tests in `src/routes/refs.test.tsx`, jsdom, `animateLayout` and `styleEffect`
+mocked. They cover the boundary (the mutation is in the DOM when the mock
+reconciles), overlap and its in-flight count, owner-level cleanup for both
+composables, releasing a settled group, rebinding the replacement branch,
+binding only the px/rem branches, and driving a bound value from a control. The
+radius correction itself is not asserted here: jsdom has no projection renderer,
+so that claim rests on the browser observations above.
+
+### Browser checks (Playwright)
+
+`pnpm test:e2e` runs `e2e/hydration.spec.ts` and `e2e/layout-text.spec.ts` in
+Chromium against the Vite dev server on port 4399 — `--strictPort`, one worker,
+started and stopped by Playwright. Dev is deliberate: the dev build of
+`solid-js` reports hydration mismatches, which a production build strips. The
+three hydration checks on `/motion`:
+
+- **No JavaScript.** Asserts the server response and its paint carry every
+  `[data-ssr-probe]` frame — `initial={{ x: -12, opacity: 0.5 }}`, the
+  `initial={false}` last keyframe `translateX(24px)`, and the borrowed
+  `values={{ x }}` frame `translateX(40px)` — with the client-only ref report
+  still empty, and that the refrow lays out as a wrapped two-column grid.
+- **Hydration.** Holds every module script until the recorder has frozen a
+  fully parsed, pre-script paint of the server markup, so no frame labelled
+  "server paint" can be hydration already in flight. Records every
+  `[data-layout]`/`[data-ssr-probe]` node from document-start, then hydrates.
+  Asserts each probe was first seen while the document parsed (server
+  markup), that hydration kept the same nodes, that every tracked node was
+  sampled both before and after hydration at one box/transform/opacity, that
+  the probe inline styles were not rewritten, and that every tracked node's
+  frozen server paint (box, position, computed and inline transform/opacity)
+  equals the no-JS page, along with the refrow geometry. Console errors and
+  hydration warnings fail the run.
+- **After hydration.** Clicks the refs "Widen" toggle, asserts the run log
+  reports `Refs → widen` finalised, polls the committed height, and samples the
+  inline transform through `DOMMatrix` from before the click: at least one
+  sample must be numerically non-identity (more than half a pixel of
+  translation or half a percent of scale), and that frame must come before the
+  settled `none`. That is a hydration check that the boundary is still live
+  after adoption, not an animation-correctness suite: spring curves, duration
+  and timing are not asserted by this spec or by the jsdom tests, and remain
+  unverified.
+
+`layout-text.spec.ts` is the text-geometry check. For the tile toggle and the
+shared hero on `/`, the ref box and radius card on `/motion`, and the shared
+hero on `/refs`, it samples `getBoundingClientRect()` (painted, after every
+ancestor transform) against `offsetWidth`/`offsetHeight` (layout) once per
+frame, with the run interrupted by a second click. Every visible label has to
+stay within 3% of its layout box, and at least one sampled frame has to have a
+projected layout ancestor — otherwise a missing animation could pass vacuously.
+Removing the `display: inline-block` rule fails the ref-box case at 0.56× its
+layout width, which is the uncorrected shape this test exists to catch.
+
+First run needs `pnpm exec playwright install chromium`. Only Chromium is
+configured, matching the browser limitation above.
 
 ## Bundle size (measured snapshot)
 
@@ -210,6 +354,13 @@ minimal-framework baseline was built, so no cross-framework comparison is claime
 | `virtual_solid-ssr-entry-client-*.css` | app styles                        |    0.4 |     0.3 |       0.2 |
 | `_.404_*.js`                           | 404 (not loaded first)            |    0.5 |     0.4 |       0.3 |
 | document HTML                          | SSR of `/`                        |    6.0 |     2.4 |       1.9 |
+
+**This table predates the refs route.** With a second route importing `motion`,
+the current build factors the engine into a shared `animate-layout-*.js` chunk
+(101.7 kB raw / 33.7 kB gzip in the build measured here), leaves ~8 kB per
+route, and merges the web runtime into the router chunk. Both pages load the
+shared chunks; a navigation between them reuses them. The figures above describe
+the single-route build and were not re-measured after the route was added.
 
 - **Initial page load.** Confirmed with
   `performance.getEntriesByType('resource')`: entry + `web` + `dist` + `router` +
@@ -280,8 +431,14 @@ Initial-load set: `PORT=4321 node dist/server/node.js`, open the page, then
 - **No broad guarantees.** These are observations on one page, one version, one
   build. Motion's scheduling is internal behaviour; the promise hand-off in
   particular is undocumented. Re-measure after upgrading `motion`.
+- **The radius handoff is an interaction, not a documented feature.** Binding a
+  px `borderRadius` before `animateLayout()` adopts a node is what makes its
+  scale corrector run; nothing in Motion's layout docs promises that, and the
+  non-px case produces a wrong value rather than an error.
 - **The jsdom harness is a mock.** It reproduces Motion's scheduling contract,
-  not its animation engine; it cannot catch visual regressions. The numbers in
+  not its animation engine; it cannot catch visual regressions, and it never
+  runs a spring, so curve shape, duration and timing are untested. The browser
+  spec observes projection transforms but not how they evolve. The numbers in
   the run log (layout nodes/shared/reconcile ms) describe the scope at
   reconcile time, not what was animated.
 - **Bundle numbers are a snapshot**, not a budget (see
@@ -295,6 +452,8 @@ Initial-load set: `PORT=4321 node dist/server/node.js`, open the page, then
 - [Layout animation for React (`layout`, `layoutId`, `AnimatePresence`)](https://motion.dev/docs/react-layout-animations)
 - [spring (options, `velocity` default)](https://motion.dev/docs/spring)
 - [animate (`animateLayout` returns the same controls)](https://motion.dev/docs/animate)
+- [styleEffect (the binding the refs page uses)](https://motion.dev/docs/style-effect)
+- [motionValue](https://motion.dev/docs/motion-value)
 - Examples: [JS layout animation](https://motion.dev/examples/js-layout-animation),
   [JS shared layout animation](https://motion.dev/examples/js-shared-layout-animation)
 

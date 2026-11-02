@@ -1,0 +1,187 @@
+/* Scoped to the refs page: every selector hangs off .refs-lab so the shared
+   app styles (App.css: `body`, `main`) stay generic. */
+.refs-lab {
+  max-width: 64rem;
+  margin: 0 auto;
+  padding: 2rem 1rem 4rem;
+  text-align: left;
+}
+
+.refs-lab-lede {
+  max-width: 46rem;
+  color: #334155;
+}
+
+.refs-lab code {
+  padding: 0.1rem 0.3rem;
+  border-radius: 0.25rem;
+  background-color: #eef2f7;
+  font-size: 0.9em;
+}
+
+.refs-lab-panel {
+  margin: 1.25rem 0;
+  padding: 1rem 1.25rem 1.25rem;
+  border: 1px solid #d8dee6;
+  border-radius: 0.75rem;
+}
+
+.refs-lab-panel h2 {
+  margin: 0 0 0.35rem;
+  font-size: 1.1rem;
+}
+
+.refs-lab-panel p {
+  max-width: 48rem;
+  margin: 0.35rem 0 0.75rem;
+  color: #475569;
+  font-size: 0.9rem;
+}
+
+.refs-lab-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.85rem;
+}
+
+.refs-lab-toolbar button {
+  padding: 0.4rem 0.9rem;
+  border: 1px solid #94a3b8;
+  border-radius: 0.5rem;
+  background-color: #f8fafc;
+  font: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.refs-lab-toolbar button:hover {
+  background-color: #eef2f7;
+}
+
+.refs-lab-toolbar output {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.8rem;
+  color: #0f172a;
+}
+
+.refs-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+/* A position-only layout node is transformed; a non-replaced inline box
+   ignores transforms, so the counter-scale would never reach the text. */
+.refs-lab [data-layout='position'] {
+  display: inline-block;
+}
+
+.refs-chip {
+  padding: 0.9rem 1.2rem;
+  border-radius: 0.5rem;
+  background-color: #e0f2fe;
+  color: #0c4a6e;
+  font-weight: 600;
+}
+
+.refs-hero-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+}
+
+.refs-hero-card {
+  display: grid;
+  align-content: start;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.6rem;
+}
+
+.refs-hero-card .refs-lab-toolbar {
+  margin-bottom: 0;
+}
+
+.refs-hero-slot {
+  display: grid;
+  align-content: start;
+  justify-items: start;
+  min-height: 12rem;
+  padding: 0.75rem;
+  border: 1px dashed #cbd5e1;
+  border-radius: 0.6rem;
+}
+
+.refs-hero {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 0.15rem;
+  width: 8rem;
+  height: 4rem;
+  border-radius: 0.6rem;
+  background-image: linear-gradient(135deg, #f59e0b, #db2777);
+  color: #fff;
+  font-weight: 600;
+}
+
+.refs-hero small {
+  font-weight: 400;
+  font-size: 0.62rem;
+  opacity: 0.9;
+}
+
+.refs-hero.is-expanded {
+  width: 100%;
+  height: 10rem;
+}
+
+.refs-readout {
+  display: block;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.72rem;
+  color: #475569;
+  overflow-wrap: anywhere;
+}
+
+.refs-readout code {
+  font-size: 0.72rem;
+}
+
+.refs-log {
+  display: grid;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.85rem;
+}
+
+.refs-log li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0.45rem 0.6rem;
+  border-radius: 0.4rem;
+  background-color: #f8fafc;
+}
+
+.refs-log-label {
+  font-weight: 600;
+}
+
+.refs-log-stats {
+  color: #475569;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.78rem;
+}
+
+.refs-lab-empty {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.9rem;
+}

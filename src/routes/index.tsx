@@ -2,6 +2,7 @@ import { Title } from '@solidjs/meta';
 import { animateLayout, type GroupAnimation } from 'motion';
 import { For, Show, createSignal, flush, onCleanup } from 'solid-js';
 
+import { paths } from '../router';
 import './index.css';
 
 // Motion's vanilla layout API, driven straight from Solid state: no wrapper
@@ -185,6 +186,11 @@ export default function MotionLab() {
         mid-flight starts a new run instead of waiting: Motion re-measures the
         scope and animates from wherever the previous run had reached.
       </p>
+      <p class="motion-lab-lede">
+        The <a href={paths.refs()}>refs lab</a> packs the same engine into two
+        composable refs and tests what a Motion value handoff does to a shared
+        element's border radius.
+      </p>
 
       <fieldset class="motion-lab-strategy">
         <legend>Update strategy</legend>
@@ -269,7 +275,9 @@ export default function MotionLab() {
         <p>
           The same four DOM nodes in a new order. Solid's keyed{' '}
           <code>&lt;For&gt;</code> keeps the element identity, so Motion
-          animates the move instead of re-mounting.
+          animates the move instead of re-mounting. Each chip's text is a nested{' '}
+          <code>data-layout="position"</code> node, the same rule as the tiles:
+          a layout node never paints text straight into its own projected box.
         </p>
         <div class="motion-lab-toolbar">
           <button
@@ -297,7 +305,7 @@ export default function MotionLab() {
           <For each={order()}>
             {(chip) => (
               <div class="motion-lab-chip" data-layout>
-                {chip}
+                <span data-layout="position">{chip}</span>
               </div>
             )}
           </For>
@@ -311,7 +319,9 @@ export default function MotionLab() {
           branches carry <code>data-layout-id="hero"</code>, but only one is
           ever in the DOM: Motion measures the outgoing node in the snapshot it
           takes before the update, then adopts the replacement at reconcile and
-          hands it that snapshot.
+          hands it that snapshot. Both branches also nest their text as{' '}
+          <code>data-layout="position"</code> nodes, so the shared box's scale
+          is counter-scaled under each label rather than applied to the letters.
         </p>
         <div class="motion-lab-toolbar">
           <button type="button" onClick={runHero}>
@@ -324,14 +334,14 @@ export default function MotionLab() {
             when={!expanded()}
             fallback={
               <div class="motion-lab-hero is-expanded" data-layout data-layout-id="hero">
-                <span>Hero</span>
-                <small>shared element, expanded</small>
+                <span data-layout="position">Hero</span>
+                <small data-layout="position">shared element, expanded</small>
               </div>
             }
           >
             <div class="motion-lab-hero" data-layout data-layout-id="hero">
-              <span>Hero</span>
-              <small>shared element</small>
+              <span data-layout="position">Hero</span>
+              <small data-layout="position">shared element</small>
             </div>
           </Show>
         </div>

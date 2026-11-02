@@ -33,10 +33,33 @@ export default defineConfig({
   },
   test: {
     globals: false,
-    setupFiles: ['./vitest-setup.ts'],
-    // jsdom + the browser build: these are component tests.
-    environment: 'jsdom',
-    include: ['src/**/*.test.tsx'],
+    // Two projects, because the same src module behaves differently per
+    // environment: `client` runs the browser build of @solidjs/web under
+    // jsdom, `server` runs the server build under Node so a test can call
+    // the real `renderToString()`. Each project's `include` is the other's
+    // complement, so no test file runs twice. The root sets only what both
+    // share, because array options inherit by concatenation: `include` and
+    // `setupFiles` live on the project that needs them.
+    projects: [
+      {
+        test: {
+          name: 'client',
+          // jsdom + the browser build: these are component tests.
+          environment: 'jsdom',
+          setupFiles: ['./vitest-setup.ts'],
+          include: ['src/**/*.test.tsx'],
+          exclude: ['src/**/*.ssr.test.tsx'],
+        },
+      },
+      {
+        test: {
+          name: 'server',
+          // Node + the server build: `renderToString()` and `isServer`.
+          environment: 'node',
+          include: ['src/**/*.ssr.test.tsx'],
+        },
+      },
+    ],
   },
   build: {
     target: 'esnext',
